@@ -186,6 +186,26 @@ def _find_order_by_reference(cur, order_reference: str) -> dict | None:
     return dict(row) if row else None
 
 
+def _get_order_items(cur, order_id: int) -> list[dict]:
+    """Full current line-item list for an order, joined against products
+    so callers (main.py -> frontend) can render the complete cart instead
+    of just the delta that was applied in this call."""
+    cur.execute(
+        """
+        SELECT p.name, p.price, oi.quantity
+        FROM order_items oi
+        JOIN products p ON p.id = oi.product_id
+        WHERE oi.order_id = %s
+        ORDER BY p.name;
+        """,
+        (order_id,),
+    )
+    return [
+        {"name": row["name"], "price": float(row["price"]), "quantity": row["quantity"]}
+        for row in cur.fetchall()
+    ]
+
+
 def cancel_order(order_reference: str, reason: str | None = None) -> dict:
     with get_connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -197,12 +217,19 @@ def cancel_order(order_reference: str, reason: str | None = None) -> dict:
             if order["status"] == "delivered":
                 return {"status": "already_delivered", "order_id": order["id"]}
 
+            items = _get_order_items(cur, order["id"])
+
             cur.execute(
                 "UPDATE orders SET status = 'cancelled', updated_at = NOW() WHERE id = %s;",
                 (order["id"],),
             )
             conn.commit()
-            return {"status": "ok", "order_id": order["id"]}
+            return {
+                "status": "ok",
+                "order_id": order["id"],
+                "items": items,
+                "total_price": float(order["total_price"]),
+            }
 
 
 def update_order(order_reference: str, changes: list[dict]) -> dict:
@@ -241,17 +268,21 @@ def update_order(order_reference: str, changes: list[dict]) -> dict:
                             (order["id"], product["id"]),
                         )
                     else:
+                        # True upsert in one statement. This relies on the
+                        # UNIQUE (order_id, product_id) constraint added to
+                        # order_items — without it, ON CONFLICT has nothing
+                        # to match against and silently falls through to
+                        # inserting a duplicate row every time an existing
+                        # item's quantity is changed (this was the bug that
+                        # caused doubled line items and inflated totals).
                         cur.execute(
                             """
                             INSERT INTO order_items (order_id, product_id, quantity)
                             VALUES (%s, %s, %s)
-                            ON CONFLICT DO NOTHING;
+                            ON CONFLICT (order_id, product_id)
+                            DO UPDATE SET quantity = EXCLUDED.quantity;
                             """,
                             (order["id"], product["id"], new_qty),
-                        )
-                        cur.execute(
-                            "UPDATE order_items SET quantity = %s WHERE order_id = %s AND product_id = %s;",
-                            (new_qty, order["id"], product["id"]),
                         )
                     applied.append(change)
 
@@ -283,6 +314,12 @@ def update_order(order_reference: str, changes: list[dict]) -> dict:
                 "UPDATE orders SET total_price = %s, updated_at = NOW() WHERE id = %s;",
                 (new_total, order["id"]),
             )
+
+            # Full current cart post-update, not just the delta that was
+            # applied this call — the frontend needs the whole picture to
+            # render the live order panel correctly.
+            items = _get_order_items(cur, order["id"])
+
             conn.commit()
 
             return {
@@ -290,6 +327,7 @@ def update_order(order_reference: str, changes: list[dict]) -> dict:
                 "order_id": order["id"],
                 "applied": applied,
                 "failed": failed,
+                "items": items,
                 "new_total_price": float(new_total),
             }
 

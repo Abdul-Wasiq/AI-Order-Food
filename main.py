@@ -171,7 +171,7 @@ ALL_TOOLS = (
 )
 
 
-SYSTEM_PROMPT = """You are a friendly phone order-taker at "XYZ Restaurant". You are speaking
+SYSTEM_PROMPT = """You are a friendly phone order-taker at "Kababjees Restaurant". You are speaking
 live with a customer who just called in to place an order — behave exactly like a real
 restaurant employee answering the phone, not like a generic AI assistant.
 
@@ -185,7 +185,7 @@ so just use this fixed list for this phase):
 - Soft Drink — Rs. 150
 
 CONVERSATION FLOW FOR A NEW ORDER:
-1. Greet the caller briefly and naturally, e.g. "Hi, thanks for calling XYZ, what can I get
+1. Greet the caller briefly and naturally, e.g. "Hi, thanks for calling Kababjees, what can I get
    started for you?" Do not over-explain who you are.
 2. Listen to what they want. If they name something not on the menu, apologize briefly and
    mention 2-3 similar items from the menu instead.
@@ -255,6 +255,83 @@ def build_config(system_prompt: str, resumption_handle=None):
             sliding_window=types.SlidingWindow()
         ),
     )
+
+
+def build_order_update_payload(tool_name: str, tool_result: dict) -> dict | None:
+    """
+    Turns a raw db.py result into the small, frontend-friendly payload the
+    browser needs to update the live order panel + fire a notification.
+    Returns None if this result isn't something the UI should react to
+    (e.g. an error, or a status the frontend doesn't need to show).
+    """
+    status = tool_result.get("status")
+
+    if tool_name == "place_order":
+        if status == "ok":
+            return {
+                "type": "order_update",
+                "event": "placed",
+                "order": {
+                    "order_id": tool_result.get("order_id"),
+                    "status": "confirmed",
+                    "items": [
+                        {"name": i["name"], "quantity": i["quantity"], "price": i["price"]}
+                        for i in tool_result.get("items", [])
+                    ],
+                    "total_price": tool_result.get("total_price"),
+                },
+            }
+        elif status == "unavailable":
+            return {
+                "type": "order_update",
+                "event": "unavailable",
+                "unavailable_items": tool_result.get("unavailable_items", []),
+            }
+        return None
+
+    elif tool_name == "cancel_order":
+        if status == "ok":
+            return {
+                "type": "order_update",
+                "event": "cancelled",
+                "order": {
+                    "order_id": tool_result.get("order_id"),
+                    "status": "cancelled",
+                    "items": tool_result.get("items", []),
+                    "total_price": tool_result.get("total_price"),
+                },
+            }
+        return None
+
+    elif tool_name == "update_order":
+        if status == "ok":
+            return {
+                "type": "order_update",
+                "event": "updated",
+                "order": {
+                    "order_id": tool_result.get("order_id"),
+                    "status": "confirmed",
+                    "applied": tool_result.get("applied", []),
+                    "items": tool_result.get("items", []),
+                    "total_price": tool_result.get("new_total_price"),
+                },
+            }
+        return None
+
+    elif tool_name == "check_order_status":
+        if status == "ok":
+            return {
+                "type": "order_update",
+                "event": "status",
+                "order": {
+                    "order_id": tool_result.get("order_id"),
+                    "status": tool_result.get("order_status"),
+                    "total_price": tool_result.get("total_price"),
+                },
+            }
+        return None
+
+    return None
 
 
 def handle_tool_call(tool_name: str, tool_args: dict) -> dict:
@@ -382,6 +459,17 @@ async def handle_order_call(websocket: WebSocket):
                                         handle_tool_call, fc.name, args
                                     )
                                     print(f"📦 Result: {json.dumps(tool_result, indent=2, default=str)}\n")
+
+                                    # Piggyback on the same websocket used for audio to push a
+                                    # live update to the browser UI — no polling, no reload.
+                                    ui_payload = build_order_update_payload(fc.name, tool_result)
+                                    if ui_payload:
+                                        try:
+                                            await websocket.send_text(
+                                                json.dumps(ui_payload, default=str)
+                                            )
+                                        except Exception as e:
+                                            print(f"⚠️ Failed to send order_update to browser: {e}")
 
                                     await session.send_tool_response(
                                         function_responses=[

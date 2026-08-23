@@ -1,58 +1,539 @@
 <!DOCTYPE html>
+<!-- build: kababjees-red-white-v1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>AI Food Order Line — Phase 1 Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kababjees — Order Line</title>
 <style>
+  :root {
+    --paper: #fdfaf7;
+    --paper-2: #ffffff;
+    --panel: #ffffff;
+    --ink: #1c1512;
+    --ink-dim: #7a6f68;
+    --red: #b81f2b;
+    --red-bright: #d92a37;
+    --red-deep: #8c1620;
+    --gold: #c9962e;
+    --line: #ece3dd;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; }
+
   body {
-    font-family: system-ui, sans-serif;
-    max-width: 560px;
-    margin: 60px auto;
-    text-align: center;
-    background: #111;
-    color: #eee;
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(184,31,43,0.05), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 100%, rgba(201,150,46,0.05), transparent 60%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 1180px;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 28px;
+  }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 18px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .masthead .brand {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+  .masthead .brand span {
+    color: var(--red);
+    font-style: italic;
+    font-weight: 500;
+  }
+  .masthead .sub {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  /* ---------- Call card (left) ---------- */
+  .call-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    height: fit-content;
+    box-shadow: 0 1px 3px rgba(28,21,18,0.04);
+  }
+
+  .call-status-row {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    margin-bottom: 22px;
+    align-self: flex-start;
+  }
+  .call-status-row.live { color: var(--red-deep); }
+
+  .avatar-ring {
+    width: 128px; height: 128px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 35% 30%, #fff, #f6efe9);
+    border: 1px solid var(--line);
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .avatar-ring::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(184,31,43,0);
+    transition: border-color 0.4s ease;
+  }
+  .avatar-ring.speaking::before {
+    border-color: rgba(184,31,43,0.35);
+    animation: ring-breathe 1.6s ease-in-out infinite;
+  }
+  @keyframes ring-breathe {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+  .avatar-glyph {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 600;
+    color: var(--red);
+  }
+
+  .order-taker-name {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .order-taker-role {
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    margin-bottom: 26px;
+  }
+
+  /* ---------- Simple on-call indicator (replaces waveform) ---------- */
+  .call-indicator {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 64px;
+    margin-bottom: 8px;
+  }
+  .call-pill {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 18px;
+    border-radius: 100px;
+    background: #faf2f0;
+    border: 1px solid rgba(184,31,43,0.18);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.05em;
+    color: var(--red-deep);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .call-pill.show { opacity: 1; transform: translateY(0); }
+  .call-timer {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    height: 14px;
+  }
+
+  .wave-caption {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    height: 16px;
+    margin-bottom: 28px;
+  }
+  .wave-caption.ai { color: var(--red); }
+
+  .call-controls {
+    display: flex;
+    gap: 14px;
+    width: 100%;
   }
   button {
-    font-size: 18px;
-    padding: 14px 28px;
-    border-radius: 8px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14.5px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
-    margin-top: 24px;
+    padding: 14px 20px;
+    flex: 1;
+    transition: transform 0.12s ease, filter 0.12s ease, opacity 0.2s ease;
+    letter-spacing: 0.01em;
   }
-  #startBtn { background: #2ecc71; color: #063; }
-  #stopBtn { background: #e74c3c; color: #300; }
-  #status {
-    margin-top: 20px;
-    font-size: 15px;
-    color: #9ad;
-    min-height: 24px;
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button:disabled:active { transform: none; }
+
+  #startBtn {
+    background: var(--red);
+    color: #fff;
   }
-  #log {
-    margin-top: 30px;
-    text-align: left;
-    background: #1b1b1b;
-    border-radius: 8px;
-    padding: 14px;
-    max-height: 320px;
-    overflow-y: auto;
-    font-size: 14px;
+  #startBtn:hover:not(:disabled) { filter: brightness(1.08); }
+
+  #stopBtn {
+    background: #f4e9e7;
+    color: var(--red-deep);
+    border: 1px solid rgba(184,31,43,0.18);
+  }
+  #stopBtn:hover:not(:disabled) { filter: brightness(0.98); }
+
+  .mic-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-align: center;
     line-height: 1.5;
   }
-  .you { color: #7fd1ff; }
-  .ai { color: #ffd27f; }
+
+  /* ---------- Right column ---------- */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 24px 26px;
+    box-shadow: 0 1px 3px rgba(28,21,18,0.04);
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .panel-title .badge {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+  }
+  .badge.confirmed { color: #3f7a4a; border-color: rgba(63,122,74,0.3); background: #f2f8f2; }
+  .badge.cancelled { color: var(--red-deep); border-color: rgba(184,31,43,0.3); background: #faf0ef; }
+  .badge.pending { color: var(--gold); border-color: rgba(201,150,46,0.3); background: #fbf6ea; }
+
+  /* Order panel empty state */
+  .order-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 34px 10px;
+    color: var(--ink-dim);
+  }
+  .order-empty .glyph {
+    font-size: 26px;
+    margin-bottom: 10px;
+    opacity: 0.6;
+  }
+  .order-empty p { margin: 0; font-size: 13.5px; line-height: 1.6; max-width: 260px; }
+
+  /* Order content */
+  .order-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+  .order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    animation: item-in 0.4s ease;
+  }
+  @keyframes item-in {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .order-item .qty {
+    font-family: var(--font-mono);
+    color: var(--red);
+    margin-right: 10px;
+    font-size: 13px;
+  }
+  .order-item .name { flex: 1; }
+  .order-item .price {
+    font-family: var(--font-mono);
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+
+  .order-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 16px;
+    margin-top: 4px;
+  }
+  .order-total-row .label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+  }
+  .order-total-row .amount {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--ink);
+    transition: color 0.3s ease;
+  }
+  .order-total-row .amount.flash { color: var(--red); }
+
+  /* DB write indicator */
+  .db-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+  }
+  .db-strip span {
+    transition: color 0.3s ease;
+  }
+  .db-strip span.writing { color: var(--red); }
+
+  /* Transcript panel */
+  .transcript-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+  }
+  #log:empty::after {
+    content: 'Transcript will appear here once the call starts.';
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+  .line {
+    font-size: 13.5px;
+    line-height: 1.55;
+    display: flex;
+    gap: 8px;
+  }
+  .line .who {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding-top: 2px;
+    flex-shrink: 0;
+    width: 46px;
+  }
+  .line.you .who { color: var(--gold); }
+  .line.ai .who { color: var(--red); }
+  .line .txt { color: var(--ink); opacity: 0.85; }
+
+  #log::-webkit-scrollbar { width: 5px; }
+  #log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
+
+  /* ---------- Toast notifications ---------- */
+  #toast-stack {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+    width: min(340px, calc(100vw - 48px));
+  }
+  .toast {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid #3f7a4a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 28px rgba(28,21,18,0.12);
+    animation: toast-in 0.35s cubic-bezier(.2,.9,.3,1.3);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .toast.cancelled { border-left-color: var(--red); }
+  .toast.updated { border-left-color: var(--gold); }
+  .toast .toast-icon { font-size: 17px; line-height: 1; margin-top: 1px; }
+  .toast .toast-title { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; color: var(--ink); }
+  .toast .toast-body { font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; }
+  .toast.leaving { animation: toast-out 0.3s ease forwards; }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(24px) scale(0.96); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateX(24px) scale(0.96); }
+  }
 </style>
 </head>
 <body>
 
-<h2>📞 AI Food Order Line — Phase 1</h2>
-<p>Click Start, allow mic access, then talk like you're calling in an order.</p>
+<div class="app">
 
-<button id="startBtn">Start Call</button>
-<button id="stopBtn" disabled>End Call</button>
+  <div class="masthead">
+    <div class="brand">Kabab<span>jees</span></div>
+    <div class="sub">AI Voice Order Line</div>
+  </div>
 
-<div id="status">Not connected</div>
-<div id="log"></div>
+  <!-- LEFT: Call card -->
+  <div class="call-card">
+    <div class="call-status-row" id="statusRow">
+      <span id="statusText">Not connected</span>
+    </div>
+
+    <div class="avatar-ring" id="avatarRing">
+      <div class="avatar-glyph">KJ</div>
+    </div>
+
+    <div class="order-taker-name">Order Taker</div>
+    <div class="order-taker-role">Kababjees · Voice Agent</div>
+
+    <div class="call-indicator">
+      <div class="call-pill" id="callPill">
+        <span id="callPillText">On call</span>
+      </div>
+      <div class="call-timer" id="callTimer">&nbsp;</div>
+    </div>
+
+    <div class="call-controls">
+      <button id="startBtn">Call Order Taker</button>
+      <button id="stopBtn" disabled>End Call</button>
+    </div>
+
+    <div class="mic-hint">Click to call, then allow mic access.<br>Speak like you're calling in an order.</div>
+  </div>
+
+  <!-- RIGHT: order + transcript -->
+  <div class="right-col">
+
+    <div class="panel" id="orderPanel">
+      <div class="panel-title">
+        Live Order
+        <span class="badge pending" id="orderBadge">No order yet</span>
+      </div>
+
+      <div id="orderEmpty" class="order-empty">
+        <div class="glyph">Hi I am Kababjees Bot</div>
+        <p>As soon as an order is placed, it'll show up here in real time — no refresh needed.</p>
+      </div>
+
+      <div id="orderContent" style="display:none;">
+        <div class="order-meta-row">
+          <span id="orderIdLabel">Order #—</span>
+          <span id="orderUpdatedLabel"></span>
+        </div>
+        <div class="order-items" id="orderItems"></div>
+        <div class="order-total-row">
+          <span class="label">Total</span>
+          <span class="amount" id="orderTotal">Rs. 0</span>
+        </div>
+        <div class="db-strip">
+          <span id="dbStripText">Written to Postgres</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel transcript-panel">
+      <div class="panel-title">Transcript</div>
+      <div id="log"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toast-stack"></div>
 
 <script>
 const WS_URL = "ws://localhost:8000/media-stream";
@@ -62,77 +543,269 @@ let audioContext = null;
 let micStream = null;
 let micProcessor = null;
 
-// Playback queue for AI audio chunks (24kHz PCM16 from Gemini)
 let playbackContext = null;
 let nextPlaybackTime = 0;
+let aiPlaybackTailTimer = null;
 
+let callTimerInterval = null;
+let callStartedAt = null;
+
+// ---------- DOM refs ----------
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
-const statusEl = document.getElementById("status");
+const statusRow = document.getElementById("statusRow");
+const statusText = document.getElementById("statusText");
+const avatarRing = document.getElementById("avatarRing");
+const callPill = document.getElementById("callPill");
+const callPillText = document.getElementById("callPillText");
+const callTimer = document.getElementById("callTimer");
 const logEl = document.getElementById("log");
 
-function setStatus(text) {
-  statusEl.textContent = text;
+const orderBadge = document.getElementById("orderBadge");
+const orderEmpty = document.getElementById("orderEmpty");
+const orderContent = document.getElementById("orderContent");
+const orderIdLabel = document.getElementById("orderIdLabel");
+const orderUpdatedLabel = document.getElementById("orderUpdatedLabel");
+const orderItemsEl = document.getElementById("orderItems");
+const orderTotalEl = document.getElementById("orderTotal");
+const dbStripText = document.getElementById("dbStripText");
+const toastStack = document.getElementById("toast-stack");
+
+// ---------- Simple call indicator (no waveform) ----------
+function setCallActive(active) {
+  if (active) {
+    callPill.classList.add("show");
+    callPillText.textContent = "On call";
+    avatarRing.classList.add("speaking");
+    callStartedAt = Date.now();
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(updateCallTimer, 1000);
+    updateCallTimer();
+  } else {
+    callPill.classList.remove("show");
+    avatarRing.classList.remove("speaking");
+    callTimer.textContent = "\u00A0";
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = null;
+    callStartedAt = null;
+  }
 }
 
+function updateCallTimer() {
+  if (!callStartedAt) return;
+  const elapsed = Math.floor((Date.now() - callStartedAt) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  callTimer.textContent = `${mm}:${ss}`;
+}
+
+// ---------- Status ----------
+function setConnectionStatus(connected, label) {
+  statusText.textContent = label;
+  statusRow.classList.toggle("live", connected);
+}
+
+// ---------- Transcript ----------
 function logLine(who, text) {
   const div = document.createElement("div");
-  div.className = who === "you" ? "you" : "ai";
-  div.textContent = (who === "you" ? "🧑 You: " : "🤖 AI: ") + text;
+  div.className = "line " + (who === "you" ? "you" : "ai");
+  div.innerHTML = `<span class="who">${who === "you" ? "You" : "AI"}</span><span class="txt"></span>`;
+  div.querySelector(".txt").textContent = text;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// ---------- Toasts ----------
+const TOAST_CONFIG = {
+  placed:      { icon: "✅", title: "Order placed",     cls: "" },
+  updated:     { icon: "✏️", title: "Order updated",    cls: "updated" },
+  cancelled:   { icon: "🚫", title: "Order cancelled",   cls: "cancelled" },
+  unavailable: { icon: "⚠️", title: "Item unavailable",  cls: "cancelled" },
+  status:      { icon: "📦", title: "Order status",      cls: "" },
+};
+
+function showToast(event, bodyText) {
+  const cfg = TOAST_CONFIG[event] || { icon: "🔔", title: "Order update", cls: "" };
+  const el = document.createElement("div");
+  el.className = "toast " + cfg.cls;
+  el.innerHTML = `
+    <div class="toast-icon">${cfg.icon}</div>
+    <div>
+      <div class="toast-title">${cfg.title}</div>
+      <div class="toast-body">${bodyText}</div>
+    </div>
+  `;
+  toastStack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("leaving");
+    setTimeout(() => el.remove(), 300);
+  }, 4200);
+}
+
+// ---------- Live order panel ----------
+function flashDbWrite() {
+  dbStripText.classList.remove("writing");
+  void dbStripText.offsetWidth; // restart transition
+  dbStripText.classList.add("writing");
+  setTimeout(() => dbStripText.classList.remove("writing"), 900);
+}
+
+function flashTotal() {
+  orderTotalEl.classList.remove("flash");
+  void orderTotalEl.offsetWidth;
+  orderTotalEl.classList.add("flash");
+  setTimeout(() => orderTotalEl.classList.remove("flash"), 700);
+}
+
+function fmtMoney(n) {
+  if (n === null || n === undefined) return "Rs. 0";
+  return "Rs. " + Number(n).toLocaleString("en-PK", { maximumFractionDigits: 0 });
+}
+
+function nowLabel() {
+  const d = new Date();
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function renderOrder(order, badgeClass, badgeText) {
+  orderEmpty.style.display = "none";
+  orderContent.style.display = "block";
+
+  orderIdLabel.textContent = order.order_id ? `Order #${order.order_id}` : "Order #—";
+  orderUpdatedLabel.textContent = "Updated " + nowLabel();
+
+  orderBadge.textContent = badgeText;
+  orderBadge.className = "badge " + badgeClass;
+
+  if (Array.isArray(order.items)) {
+    orderItemsEl.innerHTML = "";
+    if (order.items.length === 0) {
+      const row = document.createElement("div");
+      row.className = "order-item";
+      row.innerHTML = `<span class="name" style="color: var(--ink-dim);">No items on this order.</span>`;
+      orderItemsEl.appendChild(row);
+    } else {
+      order.items.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "order-item";
+        row.innerHTML = `
+          <span class="qty">×${item.quantity}</span>
+          <span class="name">${item.name}</span>
+          <span class="price">${fmtMoney(item.price * item.quantity)}</span>
+        `;
+        orderItemsEl.appendChild(row);
+      });
+    }
+  }
+
+  if (order.total_price !== undefined && order.total_price !== null) {
+    orderTotalEl.textContent = fmtMoney(order.total_price);
+    flashTotal();
+  }
+
+  flashDbWrite();
+}
+
+function handleOrderUpdate(payload) {
+  console.log("order_update received:", payload);
+  const event = payload.event;
+  const order = payload.order || {};
+
+  if (event === "placed") {
+    dbStripText.textContent = "Row written to orders + order_items";
+    renderOrder(order, "confirmed", "Confirmed");
+    const itemsText = (order.items || []).map(i => `${i.quantity}× ${i.name}`).join(", ");
+    showToast("placed", `${itemsText || "New order"} — ${fmtMoney(order.total_price)}`);
+
+  } else if (event === "updated") {
+    dbStripText.textContent = "Row updated in orders + order_items";
+    // Full current cart comes back from the backend now — re-render it the
+    // same way "placed" does, so the item list actually reflects reality
+    // instead of staying frozen at whatever it showed before the update.
+    renderOrder(order, "confirmed", "Confirmed");
+
+    const changeText = (order.applied || [])
+      .map(c => c.product_name ? `${c.product_name} → ${c.new_quantity}` : `${c.field} updated`)
+      .join(", ");
+    showToast("updated", changeText || "Order details changed.");
+
+  } else if (event === "cancelled") {
+    dbStripText.textContent = "Row marked cancelled";
+    // items/total are included so the panel still shows what was in the
+    // order at the moment it got cancelled, not a blank cart.
+    renderOrder(order, "cancelled", "Cancelled");
+    showToast("cancelled", `Order #${order.order_id || "—"} has been cancelled.`);
+
+  } else if (event === "unavailable") {
+    const names = (payload.unavailable_items || []).map(i => i.name).join(", ");
+    showToast("unavailable", names ? `Couldn't add: ${names}` : "Some items were unavailable.");
+
+  } else if (event === "status") {
+    orderIdLabel.textContent = order.order_id ? `Order #${order.order_id}` : orderIdLabel.textContent;
+    orderUpdatedLabel.textContent = "Updated " + nowLabel();
+    const badgeClass = order.status === "cancelled" ? "cancelled" : "confirmed";
+    orderBadge.textContent = order.status ? order.status[0].toUpperCase() + order.status.slice(1) : "Status";
+    orderBadge.className = "badge " + badgeClass;
+    orderEmpty.style.display = "none";
+    orderContent.style.display = "block";
+    if (order.total_price !== undefined) orderTotalEl.textContent = fmtMoney(order.total_price);
+  }
+}
+
+// ---------- Call lifecycle ----------
 async function startCall() {
   startBtn.disabled = true;
-  setStatus("Connecting...");
+  setConnectionStatus(false, "Connecting…");
 
   ws = new WebSocket(WS_URL);
   ws.binaryType = "arraybuffer";
 
   ws.onopen = async () => {
-    setStatus("Connected — listening 🎙️");
+    setConnectionStatus(true, "Connected");
     stopBtn.disabled = false;
+    setCallActive(true);
     await startMic();
   };
 
   ws.onmessage = (event) => {
     if (typeof event.data === "string") {
-      // Text messages (used in later phases for structured signals).
-      // For Phase 1 this mostly won't fire, but we handle it just in case.
-      console.log("Text message from server:", event.data);
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === "order_update") {
+          handleOrderUpdate(payload);
+        }
+      } catch (e) {
+        console.log("Non-JSON text message:", event.data);
+      }
       return;
     }
-    // Binary = raw PCM16 audio from Gemini, play it back.
+    // Binary = raw PCM16 audio from Gemini — just play it. Call indicator
+    // stays as a steady "on call" state; no waveform.
     playAudioChunk(event.data);
   };
 
   ws.onclose = () => {
-    setStatus("Call ended");
+    setConnectionStatus(false, "Call ended");
+    setCallActive(false);
     cleanup();
   };
 
   ws.onerror = (err) => {
     console.error("WebSocket error:", err);
-    setStatus("Connection error — check the backend is running");
+    setConnectionStatus(false, "Connection error — check the backend is running");
   };
 }
 
 async function startMic() {
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-  // Gemini Live expects 16kHz mono PCM16 input.
   audioContext = new AudioContext({ sampleRate: 16000 });
   const source = audioContext.createMediaStreamSource(micStream);
 
-  // ScriptProcessorNode is deprecated but still the simplest cross-browser
-  // way to get raw PCM frames without pulling in extra libraries. Fine for
-  // a test/demo project like this.
   micProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
   micProcessor.onaudioprocess = (e) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
     const input = e.inputBuffer.getChannelData(0);
     const pcm16 = floatTo16BitPCM(input);
     ws.send(pcm16);
@@ -154,7 +827,6 @@ function floatTo16BitPCM(floatData) {
 
 function playAudioChunk(arrayBuffer) {
   if (!playbackContext) {
-    // Gemini Live outputs 24kHz PCM16 audio.
     playbackContext = new AudioContext({ sampleRate: 24000 });
     nextPlaybackTime = playbackContext.currentTime;
   }
@@ -172,7 +844,6 @@ function playAudioChunk(arrayBuffer) {
   source.buffer = audioBuffer;
   source.connect(playbackContext.destination);
 
-  // Schedule chunks back-to-back so playback doesn't stutter or overlap.
   const startAt = Math.max(nextPlaybackTime, playbackContext.currentTime);
   source.start(startAt);
   nextPlaybackTime = startAt + audioBuffer.duration;
@@ -186,6 +857,7 @@ function stopCall() {
 function cleanup() {
   startBtn.disabled = false;
   stopBtn.disabled = true;
+  setCallActive(false);
 
   if (micProcessor) {
     micProcessor.disconnect();
