@@ -426,6 +426,10 @@ async def handle_order_call(websocket: WebSocket):
             ai_buffer.clear()
 
     while True:
+        # Only true on the very first connection of this call — after a GoAway
+        # reconnect we resume the same session via resumption_handle, so the
+        # greeting shouldn't fire again.
+        is_first_connection = resumption_handle is None
         go_away_triggered = False
         try:
             async with client.aio.live.connect(
@@ -514,6 +518,24 @@ async def handle_order_call(websocket: WebSocket):
                             )
 
                 ai_task = asyncio.create_task(stream_ai_to_browser())
+
+                if is_first_connection:
+                    # The customer hasn't said anything yet and has no reason to —
+                    # they called a restaurant, they're expecting to be greeted.
+                    # Gemini Live only speaks in response to a turn, so kick off its
+                    # first turn ourselves. This is a text turn, not audio, so it
+                    # never touches input_transcription / the customer transcript log.
+                    await session.send_client_content(
+                        turns=types.Content(
+                            role="user",
+                            parts=[types.Part(
+                                text="(The call has just connected. Greet the caller now, "
+                                     "as described in your instructions.)"
+                            )],
+                        ),
+                        turn_complete=True,
+                    )
+
                 mic_task = asyncio.create_task(stream_browser_to_ai())
 
                 done, pending = await asyncio.wait(

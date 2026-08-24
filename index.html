@@ -422,38 +422,40 @@
   #toast-stack {
     position: fixed;
     top: 24px;
-    right: 24px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
     z-index: 1000;
-    width: min(340px, calc(100vw - 48px));
+    width: min(480px, calc(100vw - 48px));
+    pointer-events: none;
   }
   .toast {
     background: #fff;
     border: 1px solid var(--line);
-    border-left: 3px solid #3f7a4a;
-    border-radius: 12px;
-    padding: 14px 16px;
-    box-shadow: 0 12px 28px rgba(28,21,18,0.12);
-    animation: toast-in 0.35s cubic-bezier(.2,.9,.3,1.3);
+    border-left: 5px solid #3f7a4a;
+    border-radius: 18px;
+    padding: 24px 28px;
+    box-shadow: 0 24px 60px rgba(28,21,18,0.22);
+    animation: toast-in 0.4s cubic-bezier(.2,.9,.3,1.3);
     display: flex;
-    gap: 12px;
+    gap: 18px;
     align-items: flex-start;
   }
   .toast.cancelled { border-left-color: var(--red); }
   .toast.updated { border-left-color: var(--gold); }
-  .toast .toast-icon { font-size: 17px; line-height: 1; margin-top: 1px; }
-  .toast .toast-title { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; color: var(--ink); }
-  .toast .toast-body { font-size: 12.5px; color: var(--ink-dim); line-height: 1.5; }
+  .toast .toast-icon { font-size: 30px; line-height: 1; margin-top: 1px; }
+  .toast .toast-title { font-family: var(--font-display); font-weight: 700; font-size: 21px; margin-bottom: 6px; color: var(--ink); }
+  .toast .toast-body { font-size: 15.5px; color: var(--ink-dim); line-height: 1.5; }
   .toast.leaving { animation: toast-out 0.3s ease forwards; }
 
   @keyframes toast-in {
-    from { opacity: 0; transform: translateX(24px) scale(0.96); }
-    to { opacity: 1; transform: translateX(0) scale(1); }
+    from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   @keyframes toast-out {
-    to { opacity: 0; transform: translateX(24px) scale(0.96); }
+    to { opacity: 0; transform: translateY(-10px) scale(0.96); }
   }
 </style>
 </head>
@@ -504,7 +506,7 @@
       </div>
 
       <div id="orderEmpty" class="order-empty">
-        <div class="glyph">Hi I am Kababjees Bot</div>
+        <div class="glyph">"say it and its on your door"</div>
         <p>As soon as an order is placed, it'll show up here in real time — no refresh needed.</p>
       </div>
 
@@ -617,15 +619,15 @@ function logLine(who, text) {
 
 // ---------- Toasts ----------
 const TOAST_CONFIG = {
-  placed:      { icon: "✅", title: "Order placed",     cls: "" },
-  updated:     { icon: "✏️", title: "Order updated",    cls: "updated" },
-  cancelled:   { icon: "🚫", title: "Order cancelled",   cls: "cancelled" },
-  unavailable: { icon: "⚠️", title: "Item unavailable",  cls: "cancelled" },
-  status:      { icon: "📦", title: "Order status",      cls: "" },
+  placed:      { icon: "", title: "Order placed",     cls: "" },
+  updated:     { icon: "", title: "Order updated",    cls: "updated" },
+  cancelled:   { icon: "", title: "Order cancelled",   cls: "cancelled" },
+  unavailable: { icon: "", title: "Item unavailable",  cls: "cancelled" },
+  status:      { icon: "", title: "Order status",      cls: "" },
 };
 
 function showToast(event, bodyText) {
-  const cfg = TOAST_CONFIG[event] || { icon: "🔔", title: "Order update", cls: "" };
+  const cfg = TOAST_CONFIG[event] || { icon: "", title: "Order update", cls: "" };
   const el = document.createElement("div");
   el.className = "toast " + cfg.cls;
   el.innerHTML = `
@@ -639,7 +641,7 @@ function showToast(event, bodyText) {
   setTimeout(() => {
     el.classList.add("leaving");
     setTimeout(() => el.remove(), 300);
-  }, 4200);
+  }, 5500);
 }
 
 // ---------- Live order panel ----------
